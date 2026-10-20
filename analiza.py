@@ -1,13 +1,10 @@
 import pandas as pd
 
+# Load the dataset
 df = pd.read_csv("data.csv")
 
-# print(df.head())
-# df.info()
-
+# Clean column names (replace dots for SQL/database compatibility)
 df = df.rename(columns = {"Reached.on.Time_Y.N": "Reached_on_Time_Y_N"})
-
-# print(df.columns)
 
 def sla_status(value):
     if value == 1:
@@ -21,14 +18,15 @@ df["SLA_Status"] = df["Reached_on_Time_Y_N"].apply(sla_status)
 summary = df.groupby("Warehouse_block").agg(
     Total_Shipments=("ID", "count"),
     Avg_Cost=("Cost_of_the_Product", "mean"),
-    Delayed_Shipments=("Reached_on_Time_Y_N", lambda x: (x == 0).sum()) # counts the amount of 0's (delayed shipments)
+    Delayed_Shipments=("Reached_on_Time_Y_N", lambda x: (x == 0).sum()) # Counts the number of delayed shipments (where value == 0)
 ).reset_index()
 
-# Delayed shipments percentage
+# Calculate delay rate (%) per warehouse
 summary["Delay_Rate_%"] = (summary["Delayed_Shipments"] / summary["Total_Shipments"]) * 100
 
 print(summary.round(2))
 
+# Export clean datasets to multi-tab Excel report
 with pd.ExcelWriter("Logistics Report.xlsx") as writer:
     summary.round(2).to_excel(writer, sheet_name="Warehouses_Summary", index=False)
     df.to_excel(writer, sheet_name="Full_Data", index=False)
